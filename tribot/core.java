@@ -62,7 +62,8 @@ public class core extends Script{
 			if(Inventory.isFull()) {
 				// go bank, this includes walking to , banking, walking back
 				GoBankAndReturn();
-			} else {
+			} else 
+			if(berryArea.contains(Player.getPosition())){
 				// pick berries loop
 				PickBerries();
 			}
@@ -105,6 +106,8 @@ public class core extends Script{
 	private void GoBankAndReturn() {
 		// walk to the bank
 		RSTile[] randomPath = Walking.randomizePath(path, 2, 2);
+		RSTile[] returnPath = Walking.invertPath(randomPath);
+		
 		if(!Walking.walkPath(randomPath)) {
 			this.shouldRun = false;
 			return;
@@ -116,6 +119,10 @@ public class core extends Script{
 		}
 		
 		// walk back from the bank
+		if(!Walking.walkPath(returnPath)) {
+			this.shouldRun = false;
+			return;
+		}
 	}
 	
 	private void PickBerries() {
