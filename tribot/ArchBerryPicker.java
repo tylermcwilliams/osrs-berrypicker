@@ -15,9 +15,9 @@ import scripts.BerryPicker.gui.*;
 @ScriptManifest(
 		authors = { "archpriest" }, 
 		category = "Money Making", 
-		name = "~arch~ Cadava Picker", 
+		name = "Arch Berry Picker", 
 		version = 1.00, 
-		description = "Picks cadava berries south-east of Varrock", 
+		description = "Picks berries south-east of Varrock", 
 		gameMode = 1)
 
 public class ArchBerryPicker extends Script{
@@ -34,8 +34,7 @@ public class ArchBerryPicker extends Script{
 		while(gui.isVisible()) {
 			General.sleep(1000);
 		}
-		
-		// main loop
+
 		while(shouldRun) {
 			
 			General.sleep(2000);
@@ -54,9 +53,7 @@ public class ArchBerryPicker extends Script{
 		}
 		
 	}
-	
-	// 
-	
+
 	private EnumTask NextTask() {
 		
 		if(Inventory.isFull()) {
