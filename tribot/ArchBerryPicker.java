@@ -1,15 +1,16 @@
+package scripts.BerryPicker;
+    
 import org.tribot.script.*;
 
-import java.util.function.Predicate;
-
 import org.tribot.api.*;
-import org.tribot.api2007.*;
 import org.tribot.api2007.*;
 import org.tribot.api2007.types.RSArea;
 import org.tribot.api2007.types.RSObject;
 import org.tribot.api2007.types.RSObjectDefinition;
 import org.tribot.api2007.types.RSPlayer;
 import org.tribot.api2007.types.RSTile;
+import scripts.BerryPicker.tasks.*;
+import scripts.BerryPicker.gui.*;
 
 @ScriptManifest(
 		authors = { "archpriest" }, 
@@ -19,8 +20,9 @@ import org.tribot.api2007.types.RSTile;
 		description = "Picks cadava berries south-east of Varrock", 
 		gameMode = 1)
 
-public class core extends Script{
-
+public class ArchBerryPicker extends Script{
+	
+	
 	RSArea berryArea = new RSArea(
 			new RSTile(3264, 3375),
 			new RSTile(3278, 3365)
@@ -44,30 +46,48 @@ public class core extends Script{
 			new RSTile(3254, 3422, 0)	
 	};
 	
-	boolean shouldRun = true;
+	public static boolean shouldRun = true;
 	
 	
 	@Override
 	public void run() {
 		
-		if(Inventory.getAll().length > 8) {
-			FirstGoBank();
-		} 
-		if(!berryArea.contains(Player.getPosition())) {
-			FirstGoBerries();
+		MainGUI gui = new MainGUI(this);
+		
+		gui.setVisible(true);
+		
+		while(gui.isVisible()) {
+			General.sleep(1000);
 		}
 		
 		// main loop
 		while(shouldRun) {
-			if(Inventory.isFull()) {
-				// go bank, this includes walking to , banking, walking back
-				GoBankAndReturn();
-			} else 
-			if(berryArea.contains(Player.getPosition())){
-				// pick berries loop
-				PickBerries();
+			
+			General.sleep(2000);
+			
+			switch(NextTask()) {
+				case BANK:
+					TaskBank.run();
+					break;
+				case BERRY:
+					TaskBerry.run();
+					break;
+				case EXIT:
+				default:
+					shouldRun = false;
 			}
 		}
+		
+	}
+	
+	// 
+	
+	private EnumTask NextTask() {
+		
+		if(Inventory.isFull()) {
+			return EnumTask.BANK;
+		}
+		return EnumTask.BERRY;
 		
 	}
 	
@@ -76,11 +96,17 @@ public class core extends Script{
 	private void FirstGoBank() {
 		
 		if(!WebWalking.walkToBank()) {
+			this.println("walking...");
 			this.shouldRun = false;
 			return;
 		} 
 		
+		Timing.waitCondition(() -> {
+			return Banking.isInBank();
+		}, General.randomLong(7000, 9000));
+		
 		if(!TryUseBank()) {
+			this.println("using...");
 			this.shouldRun = false;
 			return;
 		};
@@ -94,7 +120,7 @@ public class core extends Script{
 			return;
 		};
 		
-		RSObject[] bushes = Objects.findNearest(50, "Cadava Bushes");
+		RSObject[] bushes = Objects.findNearest(50, "Cadava Bush");
 		
 		if(bushes.length == 0) {
 			this.shouldRun = false;
@@ -147,9 +173,19 @@ public class core extends Script{
 			
 			Timing.waitCondition(()->{
 				General.sleep(1000);
-				return IsPicking();
+				return !IsPicking();
 			}, General.random(8000, 9300));
+			
+			if(bushes[0].getDefinition().getModelIDs().length > 1) {
+				if(!DynamicClicking.clickRSObject(bushes[0], "Pick-from")) {
+					return;
+				};
 				
+				Timing.waitCondition(()->{
+					General.sleep(1000);
+					return !IsPicking();
+				}, General.random(8000, 9300));
+			}
 		} 
 		
 	}
@@ -157,12 +193,10 @@ public class core extends Script{
 	// utility methods
 	
 	private RSObject[] GetBushes() {
-	
 		RSObject[] bushes = Objects.findNearest(20, bush -> {
 			RSObjectDefinition objectDef = bush.getDefinition();
-			
 			// first check if full and cadava
-			if(objectDef.getName() == "Cadava Bush" && objectDef.getModelIDs().length > 1) 
+			if(objectDef.getName().equals("Cadava bush") && objectDef.getModelIDs().length > 1) 
 				{
 					// then check if player adjacent
 					RSPlayer[] players = Players.findNearest(player -> {
@@ -182,14 +216,24 @@ public class core extends Script{
 		if(!Banking.isInBank()) {
 			return false;
 		};
+		this.println("is in bank");
 		
 		if(!Banking.isBankScreenOpen()) {
-			Banking.openBank();
+			if(!Banking.openBank()) {
+				return false;
+			};
 		}
 		
-		Banking.depositAll();
+		this.println("bank screen opened");
 		
-		return true;
+		if(Banking.isBankScreenOpen()) {
+			Banking.depositAll();
+			return true;
+		} else {
+			return false;
+		}
+		
+		
 	}
 
 	private boolean IsPicking() {
